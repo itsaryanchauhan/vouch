@@ -438,7 +438,7 @@ export def gh-manage-by-issue [
   }
 
   if $result.acted and $block_on_denounce {
-    sync-github-block-state $result.status $target_user --dry-run=$dry_run
+    sync-github-block-state $parsed.action $target_user --dry-run=$dry_run
   }
 
   $result.status
@@ -614,7 +614,7 @@ export def gh-manage-by-discussion [
   }
 
   if $result.acted and $block_on_denounce {
-    sync-github-block-state $result.status $target_user --dry-run=$dry_run
+    sync-github-block-state $parsed.action $target_user --dry-run=$dry_run
   }
 
   $result.status
@@ -951,7 +951,7 @@ export def sync-github-block-state [
       return
     }
     try {
-      api "put" $"/user/blocks/($target_user)"
+      api "put" $"/user/blocks/($target_user)" {}
       print $"Blocked ($target_user) on GitHub"
     } catch { |err|
       let msg = $err.msg
