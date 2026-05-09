@@ -68,6 +68,10 @@ inputs:
     description: "Repository in 'owner/repo' format for managers file (default: target repo)."
     required: false
     default: ""
+  block-on-denounce:
+    description: "Block the user on GitHub when denounced, and unblock on vouch/unvouch. Requires a token with 'user' scope."
+    required: false
+    default: "false"
 
 outputs:
   status:
@@ -120,5 +124,6 @@ runs:
           --pull-request=${{ inputs.pull-request }}
           --merge-immediately=${{ inputs.merge-immediately }}
           --dry-run=${{ inputs.dry-run }}
+          --block-on-denounce=${{ inputs.block-on-denounce }}
         )
         $"status=($status)" | save --append $env.GITHUB_OUTPUT

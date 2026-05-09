@@ -60,6 +60,7 @@ jobs:
 | `vouched-managers-file` | No       | `""`      | Path to managers VOUCHED file (empty = disable managers check)                                                                                                     |
 | `vouched-managers-ref`  | No       | `""`      | Git ref for the managers file (empty = default branch)                                                                                                             |
 | `vouched-managers-repo` | No       | `""`      | Repository in `owner/repo` format for managers file (empty = target repo)                                                                                          |
+| `block-on-denounce`     | No       | `"false"` | Block the user on GitHub when denounced, and unblock on vouch/unvouch. Token must have `user` scope. Note: unvouching also triggers unblock — "not denounced" is treated as the unblocked state. |
 
 ## Outputs
 

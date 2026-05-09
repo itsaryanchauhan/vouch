@@ -5,6 +5,7 @@ use ../vouch/github.nu [
   gh-check-issue
   gh-check-pr
   gh-manage-by-issue
+  sync-github-block-state
 ]
 
 const REPO = "mitchellh/vouch"
@@ -301,4 +302,38 @@ export def "test slow can-manage empty legacy with roles" [] {
       --roles [triage]
   )
   assert equal $result false
+}
+
+# --- sync-github-block-state ---
+
+export def "test sync-github-block-state dry-run denounce prints block message" [] {
+  let output = (nu -c '
+    use vouch/github.nu [sync-github-block-state]
+    sync-github-block-state "denounce" "testuser" --dry-run=true
+  ' | complete).stdout
+  assert ($output | str contains "[dry-run] Would block user testuser on GitHub")
+}
+
+export def "test sync-github-block-state dry-run vouch prints unblock message" [] {
+  let output = (nu -c '
+    use vouch/github.nu [sync-github-block-state]
+    sync-github-block-state "vouch" "testuser" --dry-run=true
+  ' | complete).stdout
+  assert ($output | str contains "[dry-run] Would unblock user testuser on GitHub")
+}
+
+export def "test sync-github-block-state dry-run unvouch prints unblock message" [] {
+  let output = (nu -c '
+    use vouch/github.nu [sync-github-block-state]
+    sync-github-block-state "unvouch" "testuser" --dry-run=true
+  ' | complete).stdout
+  assert ($output | str contains "[dry-run] Would unblock user testuser on GitHub")
+}
+
+export def "test sync-github-block-state dry-run unknown action prints nothing" [] {
+  let output = (nu -c '
+    use vouch/github.nu [sync-github-block-state]
+    sync-github-block-state "unchanged" "testuser" --dry-run=true
+  ' | complete).stdout
+  assert (($output | str trim) == "")
 }

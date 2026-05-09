@@ -340,6 +340,7 @@ export def gh-manage-by-issue [
   --pull-request = false,  # Create a pull request instead of pushing directly
   --merge-immediately = false, # Merge the pull request immediately after creation
   --dry-run = true,        # Print what would happen without making changes
+  --block-on-denounce = false, # Sync GitHub block state on denounce/vouch/unvouch
 ] {
   if ($repo | is-empty) {
     error make { msg: "--repo is required" }
@@ -436,6 +437,10 @@ export def gh-manage-by-issue [
     try { react $owner $repo_name $comment_id "+1" }
   }
 
+  if $result.acted and $block_on_denounce {
+    sync-github-block-state $result.status $target_user --dry-run=$dry_run
+  }
+
   $result.status
 }
 
@@ -496,6 +501,7 @@ export def gh-manage-by-discussion [
   --pull-request = false,  # Create a pull request instead of pushing directly
   --merge-immediately = false, # Merge the pull request immediately after creation
   --dry-run = true,        # Print what would happen without making changes
+  --block-on-denounce = false, # Sync GitHub block state on denounce/vouch/unvouch
 ] {
   if ($repo | is-empty) {
     error make { msg: "--repo is required" }
@@ -605,6 +611,10 @@ export def gh-manage-by-discussion [
         })
     }
     try { react-graphql $comment_node_id "+1" }
+  }
+
+  if $result.acted and $block_on_denounce {
+    sync-github-block-state $result.status $target_user --dry-run=$dry_run
   }
 
   $result.status
@@ -922,6 +932,54 @@ def gh-apply-action [
   }
 
   { status: "unchanged", acted: false }
+}
+
+# Sync GitHub block state to match a vouch action.
+#
+# Called after a successful vouch state change and push.
+# Block/unblock failures are non-fatal warnings — vouch state is authoritative.
+#
+# Requires a token with `user` scope for blocking to work.
+export def sync-github-block-state [
+  action: string,              # "vouch", "denounce", or "unvouch"
+  target_user: string,         # GitHub username (API-normalized)
+  --dry-run = false,           # Print what would happen, no API calls
+] {
+  if $action == "denounce" {
+    if $dry_run {
+      print $"[dry-run] Would block user ($target_user) on GitHub"
+      return
+    }
+    try {
+      api "put" $"/user/blocks/($target_user)"
+      print $"Blocked ($target_user) on GitHub"
+    } catch { |err|
+      let msg = $err.msg
+      if ($msg | str contains "403") {
+        print $"Warning: failed to block ($target_user) on GitHub — token may be missing 'user' scope"
+      } else {
+        print $"Warning: failed to block ($target_user) on GitHub: ($msg)"
+      }
+    }
+  } else if $action == "vouch" or $action == "unvouch" {
+    if $dry_run {
+      print $"[dry-run] Would unblock user ($target_user) on GitHub"
+      return
+    }
+    try {
+      api "delete" $"/user/blocks/($target_user)"
+      print $"Unblocked ($target_user) on GitHub"
+    } catch { |err|
+      let msg = $err.msg
+      if ($msg | str contains "404") {
+        # User was not blocked — silently ignore
+      } else if ($msg | str contains "403") {
+        print $"Warning: failed to unblock ($target_user) on GitHub — token may be missing 'user' scope"
+      } else {
+        print $"Warning: failed to unblock ($target_user) on GitHub: ($msg)"
+      }
+    }
+  }
 }
 
 # Check if a GitHub user is vouched in the vouch file in the given 
